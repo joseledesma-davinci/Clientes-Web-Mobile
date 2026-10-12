@@ -11,7 +11,37 @@ Para esto, define 3 posibles bloques para usar de base:
 
 Solo ese necesario tener o <script> o <template>. El resto es opcional dependiendo de lo que necesitemos.
 -->
-<!-- <script></script> -->
+<script>
+import { logout, subscribeToAuthStateChange } from './services/auth';
+
+export default {
+    name: 'App',
+    data() {
+        return {
+            // Datos del usuario autenticado, si lo hay.
+            user: {
+                id: null,
+                email: null,
+            }
+        }
+    },
+    methods: {
+        handleLogout() {
+            try {
+                logout();
+                
+                this.$router.push('/ingresar');
+            } catch (error) {
+                // TODO...
+            }
+        }
+    },
+    mounted() {
+        subscribeToAuthStateChange(userData => this.user = userData);
+    }
+    // TODO: Perfiles de usuarios.
+}
+</script>
 
 <template>
     <!-- 
@@ -53,9 +83,23 @@ Solo ese necesario tener o <script> o <template>. El resto es opcional dependien
                 "href", usamos el atributo "to".
             -->
             <li><RouterLink to="/">Home</RouterLink></li>
-            <li><RouterLink to="/chat">Chat público</RouterLink></li>
-            <li><RouterLink to="/ingresar">Ingresar</RouterLink></li>
-            <li><RouterLink to="/crear-cuenta">Crear cuenta</RouterLink></li>
+            
+            <template v-if="user.id !== null">
+                <li><RouterLink to="/chat">Chat público</RouterLink></li>
+                <li><RouterLink to="/mi-perfil">Mi perfil</RouterLink></li>
+                <li>
+                    <form 
+                        action="#"
+                        @submit.prevent="handleLogout"
+                    >
+                        <button type="submit">{{ user.email }} (Cerrar sesión)</button>
+                    </form>
+                </li>
+            </template>
+            <template v-else>
+                <li><RouterLink to="/ingresar">Ingresar</RouterLink></li>
+                <li><RouterLink to="/crear-cuenta">Crear cuenta</RouterLink></li>
+            </template>
         </ul>
     </nav>
     <main class="container mx-auto p-4">
