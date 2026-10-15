@@ -13,7 +13,8 @@ export async function getAllPosts() {
             *,
             user_profiles (
                 display_name,
-                favorite_platform
+                favorite_platform,
+                avatar_url
             )
             )
         `)
@@ -39,7 +40,8 @@ export async function getPostsByUserId(userId) {
         .select(`
             *,
             user_profiles (
-                display_name
+                display_name,
+                avatar_url
             )
         `)
     .eq('user_id', userId)

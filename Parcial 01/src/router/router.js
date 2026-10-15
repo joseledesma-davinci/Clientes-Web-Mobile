@@ -10,7 +10,7 @@ import UserProfile from '../pages/UserProfile.vue';
 import MyProfile from '../pages/MyProfile.vue';
 
 const routes = [
-  { path: '/',              component: Home,        name: 'home' },
+  { path: '/',              component: Home,         name: 'home' },
   { path: '/login',         component: Login,        name: 'login' },
   { path: '/register',      component: Register,     name: 'register' },
   { path: '/feed',          component: Feed,         name: 'feed',          meta: { requiresAuth: true } },
