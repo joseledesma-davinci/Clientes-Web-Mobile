@@ -1,10 +1,5 @@
 /*
-    Esta tabla va a tener una relación de 1-a-1 con `auth.users`, vamos a usar como PK el id 
-    del usuario.
-    Además, este id que creamos en la tabla va a funcionar también como FK.
-
-    Para definir que un campo es una FK en Postgres es muy sencillo, solo escribimos:
-        <campo> <tipo> ... references <tabla> (<pk>)
+    User Profiles Table
 */
 create table user_profiles (
     id uuid primary key references auth.users (id),
@@ -12,5 +7,7 @@ create table user_profiles (
     bio text,
     display_name text,
     favorite_platform text,
-    created_at timestamptz default now()
+    avatarUrl text, -- para el futuro
+    created_at timestamptz default now(),
+    updated_at timestamptz default now()
 );

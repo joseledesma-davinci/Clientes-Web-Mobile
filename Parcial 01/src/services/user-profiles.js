@@ -37,3 +37,18 @@ export async function createUserProfile(data) {
         throw new Error(error.message);
     }
 }
+
+/**
+ * Actualiza los datos del perfil del usuario autenticado.
+ */
+export async function updateUserProfile(id, updates) {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error al actualizar el perfil: ', error);
+    throw new Error(error.message);
+  }
+}

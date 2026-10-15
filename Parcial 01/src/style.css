@@ -1,36 +1,87 @@
 @import 'tailwindcss';
 
-/* @theme {
-    --color-brand-red: red;
-} */
+@theme {
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
+
+  --color-gaming-dark: #0a0a1a;
+  --color-gaming-darker: #06060f;
+  --color-gaming-card: #12122a;
+  --color-gaming-card-hover: #1a1a3a;
+  --color-gaming-border: #2a2a4a;
+  --color-neon-purple: #a855f7;
+  --color-neon-purple-dim: #7c3aed;
+  --color-neon-cyan: #06b6d4;
+  --color-neon-cyan-dim: #0891b2;
+  --color-neon-green: #22d3ee;
+  --color-neon-pink: #ec4899;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-gaming-dark);
+    color: #e2e8f0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
+  /* Scrollbar gaming */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-gaming-darker);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-neon-purple-dim);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-neon-purple);
+  }
+}
 
 @layer components {
-    .h1 {
-        /*
-            Si decidimos crear clases de CSS propias cuando estamos usando Tailwind, es recomendable
-            usar las variables que el framework define para nuestros estilos, así podemos garantizar 
-            la cohesión en el diseño.
+  .btn-primary {
+    @apply px-6 py-2.5 rounded-lg font-semibold text-white
+      bg-gradient-to-r from-neon-purple to-neon-cyan
+      hover:from-neon-purple-dim hover:to-neon-cyan-dim
+      transition-all duration-300 cursor-pointer
+      shadow-[0_0_15px_rgba(168,85,247,0.3)]
+      hover:shadow-[0_0_25px_rgba(168,85,247,0.5)];
+  }
 
-            Es cierto que puede ser un poco incómodo hacerlo si no sabemos de memoria los nombres de
-            las variables de Tailwind.
-            Es por esta razón que, de ir por el camino de crear clases propias, suele ser una buena 
-            idea aprovechar la instrucción "@apply".
+  .btn-secondary {
+    @apply px-6 py-2.5 rounded-lg font-semibold
+      border border-neon-purple text-neon-purple
+      hover:bg-neon-purple hover:text-white
+      transition-all duration-300 cursor-pointer;
+  }
 
-            @apply nos permite usar los valores de otras clases de Tailwind para crear nuevas clases.
-        */
-        @apply mb-4 text-3xl;
+  .card-gaming {
+    @apply bg-gaming-card border border-gaming-border rounded-xl p-5
+      transition-all duration-300
+      hover:border-neon-purple/50
+      hover:shadow-[0_0_20px_rgba(168,85,247,0.15)];
+  }
 
-        /* margin-bottom: calc(var(--spacing) * 4);
-        font-size: var(--text-3xl);
-        line-height: var(--tw-leading, var(--text-3xl--line-height)); */
-    }
+  .input-gaming {
+    @apply w-full p-3 rounded-lg
+      bg-gaming-darker border border-gaming-border
+      text-gray-100 placeholder-gray-500
+      focus:outline-none focus:border-neon-purple
+      focus:shadow-[0_0_10px_rgba(168,85,247,0.2)]
+      transition-all duration-300;
+  }
+
+  .label-gaming {
+    @apply block mb-1.5 text-sm font-semibold text-gray-300 uppercase tracking-wider;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.6), 0 0 40px rgba(168, 85, 247, 0.3);
+  }
 }
-
-/* html, body, #app {
-    height: 100%;
-}
-
-#app {
-    display: grid;
-    grid-template-rows: 60px 1fr 100px;
-} */

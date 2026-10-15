@@ -9,4 +9,7 @@ import tailwind from '@tailwindcss/vite';
 export default {
     // Noten los paréntesis. Los plugins generalmente son funciones.
     plugins: [vue(), tailwind()],
+    server: {
+        // host: true,
+    }
 }

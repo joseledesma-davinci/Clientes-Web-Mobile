@@ -40,12 +40,14 @@ DO $$
     sara_id uuid;
     pepe_id uuid;
   BEGIN
-    sara_id := PERFORM public.create_user_with_profile('sara@za.com', 'asdasd', '¡Hola! Me llamo Sara za', 'Saraza', 'PS5');
-    pepe_id := PERFORM public.create_user_with_profile('pepe@trueno.com', 'asdasd', NULL, 'Pepe Trueno', NULL);
+    sara_id := public.create_user_with_profile('sara@za.com', 'asdasd', '¡Hola! Me llamo Sara za', 'Saraza', 'PS5');
+    pepe_id := public.create_user_with_profile('pepe@trueno.com', 'asdasd', NULL, 'Pepe Trueno', NULL);
+
+  INSERT INTO game_posts (user_id, game_title, platform, rating, content, created_at)
+  VALUES (sara_id, 'The Last of Us Part II', 'PS5', 5, 'The Last of Us Part II es un videojuego de terror de acción y aventura de disparos en tercera persona de 2020 desarrollado por Naughty Dog y publicado por Sony Interactive Entertainment.', '2026-09-17 10:12:13+00:00'),
+    (pepe_id, 'Halo Infinite', 'Xbox Series X', 4, 'Halo Infinite es un videojuego de disparos en tercera persona desarrollado por 343 Industries y publicado por Xbox Game Studios.', '2026-09-17 10:13:54+00:00'),
+    (sara_id, 'God of War Ragnarök', 'PS5', 5, 'God of War Ragnarök es un videojuego de acción y aventura desarrollado por SIE Santa Monica Studio y publicado por Sony Interactive Entertainment.', '2026-09-17 10:14:37+00:00');
+
   END;
 $$;
 
-INSERT INTO game_posts (user_id, game_title, platform, rating, content, created_at)
-VALUES (sara_id, 'The Last of Us Part II', 'PS5', 5, 'The Last of Us Part II es un videojuego de terror de acción y aventura de disparos en tercera persona de 2020 desarrollado por Naughty Dog y publicado por Sony Interactive Entertainment.', '2026-09-17 10:12:13+00:00'),
-    (pepe_id, 'Halo Infinite', 'Xbox Series X', 4, 'Halo Infinite es un videojuego de disparos en tercera persona desarrollado por 343 Industries y publicado por Xbox Game Studios.', '2026-09-17 10:13:54+00:00'),
-    (sara_id, 'God of War Ragnarök', 'PS5', 5, 'God of War Ragnarök es un videojuego de acción y aventura desarrollado por SIE Santa Monica Studio y publicado por Sony Interactive Entertainment.', '2026-09-17 10:14:37+00:00');

@@ -1,72 +1,85 @@
 <script>
-import BaseH1 from '../components/BaseH1.vue';
 import { login } from '../services/auth.js';
 
 export default {
-    name: 'Login',
-    components: { BaseH1, },
-    data() {
-        return {
-            user: {
-                email: '',
-                password: '',
-            },
-            loading: false,
-        }
+  name: 'Login',
+  data() {
+    return {
+      form: {
+        email: '',
+        password: '',
+      },
+      loading: false,
+      errorMsg: '',
+    };
+  },
+  methods: {
+    async handleSubmit() {
+      this.errorMsg = '';
+      this.loading = true;
+      try {
+        await login({
+          email: this.form.email,
+          password: this.form.password,
+        });
+        this.$router.push('/feed');
+      } catch (error) {
+        this.errorMsg = error?.message ?? 'Error al iniciar sesión. Verificá tus datos.';
+      }
+      this.loading = false;
     },
-    methods: {
-        async handleSubmit() {
-            try {
-                this.loading = true;
-
-                await login({
-                    email: this.user.email,
-                    password: this.user.password,
-                });
-
-                /*
-                    # Redireccionamiento desde código
-                    Para redireccionar necesitamos usar el método "push" del objeto Router.
-                    ¿De dónde sacamos el Router?
-                    En un proyecto que esté usando Vue Router, automáticamente vamos a tener a
-                    disposición en todos los componentes una propiedad especial llamada "$router"
-                    con el Router.
-                */
-                this.$router.push('/chat');
-            } catch (error) {
-                // TODO...
-            }
-            this.loading = false;
-        }
-    }
+  },
 }
 </script>
 
 <template>
-    <BaseH1>Ingresar a mi cuenta</BaseH1>
+  <section class="max-w-md mx-auto py-8">
+    <div class="text-center mb-8">
+      <span class="text-4xl block mb-3">🔑</span>
+      <h1 class="font-heading text-3xl font-bold text-white">Iniciar Sesión</h1>
+      <p class="text-gray-400 mt-2">Ingresá a tu cuenta de GamerZone</p>
+    </div>
 
-    <form 
-        action="#"
-        @submit.prevent="handleSubmit"
-    >
-        <div class="mb-3">
-            <label class="block mb-2" for="email">Email</label>
-            <input
-                type="email"
-                id="email"
-                class="w-full p-2 border border-gray-600 rounded"
-                v-model="user.email"
-            >
-        </div>
-        <div class="mb-3">
-            <label class="block mb-2" for="password">Contraseña</label>
-            <input
-                type="password"
-                id="password"
-                class="w-full p-2 border border-gray-600 rounded"
-                v-model="user.password"
-            >
-        </div>
-        <button type="submit" class="transition px-4 py-2 rounded bg-blue-700 text-white hover:bg-blue-600">Ingresar</button>
+    <!-- Mensaje de error -->
+    <div v-if="errorMsg" class="mb-4 p-3 rounded-lg bg-red-900/30 border border-red-500/50 text-red-300 text-sm">
+      ⚠️ {{ errorMsg }}
+    </div>
+
+    <form @submit.prevent="handleSubmit" class="card-gaming space-y-5">
+      <div>
+        <label class="label-gaming" for="login-email">Email</label>
+        <input
+          type="email"
+          id="login-email"
+          class="input-gaming"
+          placeholder="tu@email.com"
+          v-model="form.email"
+          required
+        />
+      </div>
+      <div>
+        <label class="label-gaming" for="login-password">Contraseña</label>
+        <input
+          type="password"
+          id="login-password"
+          class="input-gaming"
+          placeholder="••••••••"
+          v-model="form.password"
+          required
+        />
+      </div>
+      <button
+        type="submit"
+        class="btn-primary w-full"
+        :disabled="loading"
+      >
+        {{ loading ? 'Ingresando...' : 'Ingresar' }}
+      </button>
     </form>
+
+    <p class="text-center text-gray-400 mt-6">
+      ¿No tenés cuenta?
+      <RouterLink to="/register" class="text-neon-cyan hover:underline font-semibold">Creá una acá</RouterLink>
+    </p>
+  </section>
 </template>

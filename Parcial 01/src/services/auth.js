@@ -12,20 +12,14 @@ let userData = {
 let observers = [];
 
 supabase.auth.onAuthStateChange((event, session) => {
-    // console.group("Cambio de estado de autenticación");
-    // console.log("Evento: ", event);
-    // console.log("Sesión: ", session);
-    // console.groupEnd();
     if(session !== null) {
         userData = {
             id: session.user.id,
             email: session.user.email,
         }
 
-        // Dejamos cargando los datos del perfil en paralelo.
         getUserProfileById(userData.id)
             .then(profile => {
-                // Opcionalmente, podríamos esperar un segundo y reintentar.
                 if(!profile) return;
 
                 userData = {
@@ -35,7 +29,6 @@ supabase.auth.onAuthStateChange((event, session) => {
                     favorite_platform: profile.favorite_platform,
                 }
 
-                // ¡No nos olvidemos de notificar a los observers!
                 notifyAll();
             });
     } else {
@@ -55,11 +48,9 @@ supabase.auth.onAuthStateChange((event, session) => {
  * @param {{email: string, password: string}} data
  * @returns {Promise<{id: string, email: string}>}
  */
-export async function register({ email, password }) {
+export async function register({ email, password, displayName }) {
     const { data, error } = await supabase
         .auth
-        // signUp permite crear un usuario pasándole un email o número de teléfono, y un password.
-        // Retorna una Promise que se resuelve con un objeto con las propiedades "data" y "error".
         .signUp({
             email,
             password,
@@ -70,10 +61,10 @@ export async function register({ email, password }) {
         throw new Error(error.message);
     }
 
-    // Creamos el perfil del usuario.
     await createUserProfile({
         id: data.user.id,
         email,
+        display_name: displayName,
     });
 
     // ¡El usuario está registrado y autenticado!
@@ -123,6 +114,17 @@ export async function logout() {
     }
 }
 
+/**
+ * Cambia la contraseña del usuario autenticado.
+ */
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    console.error('Error al cambiar la contraseña: ', error);
+    throw new Error(error.message);
+  }
+}
+
 /*
 +-----------------------------------------------------------------------------------------
 | Implementación de las funcionalidades para el patrón observer
@@ -133,10 +135,8 @@ export async function logout() {
  * @param {() => {}} callback El observer a suscribir.
  */
 export function subscribeToAuthStateChange(callback) {
-    // Registramos el observer en nuestro stack.
     observers.push(callback);
 
-    // Le notificamos inmediatamente la data actual del usuario.
     notify(callback);
 }
 
@@ -145,13 +145,9 @@ export function subscribeToAuthStateChange(callback) {
  * @param {() => {}} callback El observer a notificar.
  */
 function notify(callback) {
-    // Para notificar al observer, como es un callback, solo necesitamos ejecutarlo y pasarle una
-    // copia de los datos del usuario.
     callback({...userData});
 }
 
 function notifyAll() {
-    // Notificamos a todos los observers.
-    // observers.forEach(observer => notify(observer));
     observers.forEach(notify);
 }

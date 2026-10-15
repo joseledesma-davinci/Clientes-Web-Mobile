@@ -71,14 +71,6 @@ export async function createPost({ user_id, game_title, platform, rating, conten
 
 /**
  * Se suscribe en tiempo real a los nuevos posts insertados en game_posts.
- * Cada vez que alguien publica un post, se ejecuta el callback.
- *
- * Uso:
- *   const channel = subscribeToNewPosts((nuevoPost) => {
- *     console.log('Nuevo post:', nuevoPost);
- *     posts.value.unshift(nuevoPost);
- *   });
- *
  *
  * @param {function} callback - Función que recibe el nuevo registro insertado.
  */
