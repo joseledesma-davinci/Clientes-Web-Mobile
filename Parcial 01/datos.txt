@@ -1,0 +1,13 @@
+Carrera: Diseño y Desarrollo Web
+Materia: Clientes Web Mobile
+Cuatrimestre: 4
+Año: 2026
+Turno: Noche
+Comisión: DWN4AV
+Apellido y nombre: Ledesma Jose Nicolas
+Docente: Santiago Gallino
+Carácter de entrega: 1er parcial
+
+Proyecto: GamerZone - Red Social Gaming
+Temática: Red social de videojuegos
+
