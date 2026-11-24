@@ -1,0 +1,2 @@
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('avatars_test', 'avatars_test', TRUE, 524288, '{"image/jpeg", "image/pjpeg", "image/png", "image/webp", "image/avif"}');
