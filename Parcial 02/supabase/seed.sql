@@ -40,6 +40,12 @@ DO $$
     sara_id uuid;
     pepe_id uuid;
   BEGIN
+    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    VALUES ('avatars', 'avatars', TRUE, 524288, '{"image/jpeg", "image/pjpeg", "image/png", "image/webp", "image/gif"}');
+    
+    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    VALUES ('post-images', 'post-images', TRUE, 524288, '{"image/jpeg", "image/pjpeg", "image/png", "image/webp", "image/gif"}');
+
     sara_id := public.create_user_with_profile('sara@za.com', 'asdasd', '¡Hola! Me llamo Sara za', 'Saraza', 'PS5');
     pepe_id := public.create_user_with_profile('pepe@trueno.com', 'asdasd', NULL, 'Pepe Trueno', NULL);
 
@@ -51,3 +57,24 @@ DO $$
   END;
 $$;
 
+/*
+    Comentarios de ejemplo para probar la funcionalidad.
+*/
+DO $$
+  DECLARE
+    sara_id uuid;
+    pepe_id uuid;
+    tlou_post_id bigint;
+  BEGIN
+    SELECT id INTO sara_id FROM user_profiles WHERE email = 'sara@za.com' LIMIT 1;
+    SELECT id INTO pepe_id FROM user_profiles WHERE email = 'pepe@trueno.com' LIMIT 1;
+    SELECT id INTO tlou_post_id FROM game_posts WHERE game_title = 'The Last of Us Part II' LIMIT 1;
+
+    IF sara_id IS NOT NULL AND pepe_id IS NOT NULL AND tlou_post_id IS NOT NULL THEN
+      INSERT INTO post_comments (post_id, user_id, content)
+      VALUES
+        (tlou_post_id, pepe_id, 'Gran reseña. Me dieron ganas de volver a jugarlo.'),
+        (tlou_post_id, sara_id, '¡Gracias! El modo historia me encantó.');
+    END IF;
+  END;
+$$;

@@ -1,11 +1,28 @@
 <script>
 import UserAvatar from './UserAvatar.vue';
+import { subscribeToAuthStateChange } from '../services/auth.js';
+import { createComment, deleteComment, getCommentsByPostId } from '../services/comments.js';
 
 export default {
   name: 'PostCard',
   components: { UserAvatar },
   props: {
     post: { type: Object, required: true },
+    showComments: { type: Boolean, default: true },
+  },
+  data() {
+    return {
+      comments: [],
+      commentText: '',
+      loadingComments: false,
+      loadingCommentSubmit: false,
+      deletingCommentId: null,
+      commentErrorMsg: '',
+      user: {
+        id: null,
+        email: null,
+      },
+    };
   },
   computed: {
     authorName() {
@@ -39,13 +56,97 @@ export default {
       };
       return icons[this.post?.platform] ?? '🎮';
     },
+    postImageUrl() {
+      return this.post?.image_url ?? '/img/post.png';
+    },
+    hasRealImage() {
+      return Boolean(this.post?.image_url);
+    },
+  },
+  async mounted() {
+    subscribeToAuthStateChange((userData) => {
+      this.user = userData;
+    });
+
+    if (this.showComments) {
+      await this.loadComments();
+    }
+  },
+  methods: {
+    formatCommentDate(date) {
+      if (!date) return '';
+      return new Date(date).toLocaleDateString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    },
+
+    async loadComments() {
+      this.loadingComments = true;
+      this.commentErrorMsg = '';
+
+      try {
+        this.comments = await getCommentsByPostId(this.post.id);
+      } catch (error) {
+        this.commentErrorMsg = error?.message ?? 'No se pudieron cargar los comentarios.';
+      }
+
+      this.loadingComments = false;
+    },
+
+    async handleCommentSubmit() {
+      this.commentErrorMsg = '';
+
+      if (!this.user?.id) {
+        this.commentErrorMsg = 'Necesitás iniciar sesión para comentar.';
+        return;
+      }
+
+      const content = this.commentText?.trim?.();
+      if (!content) {
+        this.commentErrorMsg = 'Escribí un comentario antes de enviarlo.';
+        return;
+      }
+
+      this.loadingCommentSubmit = true;
+
+      try {
+        const newComment = await createComment({
+          post_id: this.post.id,
+          user_id: this.user.id,
+          content,
+        });
+
+        this.comments.push(newComment);
+        this.commentText = '';
+      } catch (error) {
+        this.commentErrorMsg = error?.message ?? 'No se pudo publicar el comentario.';
+      }
+
+      this.loadingCommentSubmit = false;
+    },
+
+    async handleDeleteComment(comment) {
+      if (!this.user?.id || comment?.user_id !== this.user.id) return;
+
+      this.commentErrorMsg = '';
+      this.deletingCommentId = comment.id;
+
+      try {
+        await deleteComment({ commentId: comment.id, userId: this.user.id });
+        this.comments = this.comments.filter((c) => c.id !== comment.id);
+      } catch (error) {
+        this.commentErrorMsg = error?.message ?? 'No se pudo eliminar el comentario.';
+      }
+
+      this.deletingCommentId = null;
+    },
   },
 }
 </script>
 
 <template>
   <article class="card-gaming">
-    <!-- Cabecera: avatar + autor + fecha -->
     <div class="flex items-center gap-3 mb-4">
       <RouterLink :to="'/profile/' + post?.user_id" class="flex-shrink-0">
         <UserAvatar :name="authorName" :avatar-url="authorAvatar" size="md" />
@@ -61,12 +162,11 @@ export default {
       </span>
     </div>
 
-    <!-- Título del juego + plataforma -->
     <div class="mb-3">
-      <h3 class="font-heading text-lg font-bold text-neon-cyan flex items-center gap-2">
+      <RouterLink :to="`/post/${post?.id}`" class="font-heading text-lg font-bold text-neon-cyan flex items-center gap-2 hover:underline">
         <span>{{ platformIcon }}</span>
         {{ post?.game_title ?? 'Sin título' }}
-      </h3>
+      </RouterLink>
       <div class="flex items-center gap-1 mt-1">
         <span v-if="post?.platform" class="text-xs text-gray-400">{{ post.platform }}</span>
         <span class="text-xs text-gray-600 mx-1">•</span>
@@ -81,17 +181,64 @@ export default {
       </div>
     </div>
 
-    <!-- Contenido -->
     <p class="text-gray-300 leading-relaxed whitespace-pre-line">{{ post?.content }}</p>
 
-    <!-- Imagen (si existe) -->
-    <div v-if="post?.image_url" class="mt-4 rounded-lg overflow-hidden">
+    <div v-if="post?.image_url" class="mt-4 rounded-lg overflow-hidden border border-gaming-border relative">
       <img
-        :src="post.image_url"
+        :src="postImageUrl"
         :alt="post?.game_title ?? 'Imagen del post'"
         class="w-full max-h-80 object-cover rounded-lg"
       />
     </div>
-    
+
+    <section v-if="showComments" class="mt-5 border-t border-gaming-border pt-4">
+      <h4 class="font-heading text-white font-semibold mb-3">💬 Comentarios ({{ comments.length }})</h4>
+
+      <div v-if="commentErrorMsg" class="mb-3 p-2 rounded bg-red-900/30 border border-red-500/40 text-red-300 text-xs">
+        {{ commentErrorMsg }}
+      </div>
+
+      <form @submit.prevent="handleCommentSubmit" class="mb-4">
+        <label class="sr-only" :for="`comment-${post?.id}`">Escribir comentario</label>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <textarea
+            :id="`comment-${post?.id}`"
+            v-model="commentText"
+            class="input-gaming min-h-24"
+            placeholder="Escribí tu comentario..."
+            maxlength="500"
+          ></textarea>
+          <button
+            type="submit"
+            class="btn-primary sm:self-end"
+            :disabled="loadingCommentSubmit"
+          >
+            {{ loadingCommentSubmit ? 'Publicando...' : 'Comentar' }}
+          </button>
+        </div>
+      </form>
+
+      <p v-if="loadingComments" class="text-sm text-gray-400">Cargando comentarios...</p>
+
+      <p v-else-if="comments.length === 0" class="text-sm text-gray-500">Todavía no hay comentarios en esta publicación.</p>
+
+      <ul v-else class="space-y-3">
+        <li
+          v-for="comment in comments"
+          :key="comment.id"
+          class="bg-gaming-darker border border-gaming-border rounded-lg p-3"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-white">{{ comment?.user_profiles?.display_name ?? 'Gamer' }}</p>
+              <p class="text-xs text-gray-500">{{ formatCommentDate(comment?.created_at) }}</p>
+            </div>
+
+          </div>
+
+          <p class="text-sm text-gray-300 mt-2 whitespace-pre-line">{{ comment.content }}</p>
+        </li>
+      </ul>
+    </section>
   </article>
 </template>

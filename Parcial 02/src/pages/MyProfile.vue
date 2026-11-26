@@ -1,10 +1,14 @@
 <script>
 import UserAvatar from '../components/UserAvatar.vue';
 import PostCard from '../components/PostCard.vue';
-import { subscribeToAuthStateChange } from '../services/auth.js';
+import { subscribeToAuthStateChange, updatePassword } from '../services/auth.js';
 import { getUserProfileById, updateUserProfile } from '../services/user-profiles.js';
 import { getPostsByUserId } from '../services/posts.js';
-import { updatePassword } from '../services/auth.js';
+import { uploadAvatar } from '../services/avatars.js';
+
+const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_SIZE_MB = 0.5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
 export default {
   name: 'MyProfile',
@@ -23,8 +27,13 @@ export default {
         display_name: '',
         bio: '',
         favorite_platform: '',
-        // avatar_url: '',
+        avatar_url: '',
       },
+      avatarState: {
+        file: null,
+        preview: null,
+      },
+      avatarInputKey: 0,
       passwordForm: {
         newPassword: '',
         confirmPassword: '',
@@ -36,12 +45,16 @@ export default {
       profileError: '',
       passwordError: '',
       platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo', 'Móvil'],
+      maxImageSizeMB: MAX_IMAGE_SIZE_MB,
     };
   },
 
   computed: {
     userId() {
       return this.user.id;
+    },
+    avatarPreviewForForm() {
+      return this.avatarState.preview || this.editForm.avatar_url || null;
     },
   },
 
@@ -76,22 +89,69 @@ export default {
       this.loading = false;
     },
 
+    resetAvatarSelection() {
+      if (this.avatarState.preview) {
+        URL.revokeObjectURL(this.avatarState.preview);
+      }
+
+      this.avatarState = {
+        file: null,
+        preview: null,
+      };
+      this.avatarInputKey += 1;
+    },
+
     startEdit() {
       this.editMode = true;
       this.editForm = {
         display_name: this.profile?.display_name ?? '',
         bio: this.profile?.bio ?? '',
         favorite_platform: this.profile?.favorite_platform ?? '',
-        // avatar_url: this.profile?.avatar_url ?? '',
+        avatar_url: this.profile?.avatar_url ?? '',
       };
+      this.resetAvatarSelection();
       this.profileMsg = '';
       this.profileError = '';
     },
 
     cancelEdit() {
       this.editMode = false;
+      this.resetAvatarSelection();
       this.profileMsg = '';
       this.profileError = '';
+    },
+
+    handleAvatarChange(ev) {
+      const selectedFile = ev.target.files?.[0] ?? null;
+      this.profileError = '';
+
+      if (this.avatarState.preview) {
+        URL.revokeObjectURL(this.avatarState.preview);
+      }
+
+      if (!selectedFile) {
+        this.avatarState = { file: null, preview: null };
+        return;
+      }
+
+      if (!VALID_IMAGE_TYPES.includes(selectedFile.type)) {
+        this.avatarState = { file: null, preview: null };
+        this.profileError = 'Formato inválido. Usá JPG, PNG, WEBP o GIF.';
+        ev.target.value = '';
+        return;
+      }
+
+      if (selectedFile.size > MAX_IMAGE_SIZE_BYTES) {
+        this.avatarState = { file: null, preview: null };
+        this.profileError = `La imagen supera el tamaño permitido (${MAX_IMAGE_SIZE_MB*1024} KB).`;
+        ev.target.value = '';
+        return;
+      }
+
+      this.avatarState = {
+        file: selectedFile,
+        preview: URL.createObjectURL(selectedFile),
+      };
     },
 
     async saveProfile() {
@@ -100,18 +160,27 @@ export default {
       this.savingProfile = true;
 
       try {
+        let avatarUrl = this.editForm.avatar_url || null;
+
+        if (this.avatarState.file) {
+          avatarUrl = await uploadAvatar(this.userId, this.avatarState.file);
+        }
+
         await updateUserProfile(this.userId, {
           display_name: this.editForm.display_name || null,
           bio: this.editForm.bio || null,
           favorite_platform: this.editForm.favorite_platform || null,
-          // avatar_url: this.editForm.avatar_url || null,
+          avatar_url: avatarUrl,
         });
+
         this.profileMsg = '¡Perfil actualizado correctamente!';
         this.editMode = false;
+        this.resetAvatarSelection();
         await this.loadData();
       } catch (error) {
         this.profileError = error?.message ?? 'Error al guardar el perfil.';
       }
+
       this.savingProfile = false;
     },
 
@@ -139,19 +208,21 @@ export default {
       this.savingPassword = false;
     },
   },
+
+  unmounted() {
+    this.resetAvatarSelection();
+  },
 }
 </script>
 
 <template>
   <section>
-    <!-- Cargando -->
     <div v-if="loading" class="text-center py-16">
       <div class="inline-block w-10 h-10 border-4 border-neon-purple border-t-transparent rounded-full animate-spin"></div>
       <p class="text-gray-400 mt-4">Cargando tu perfil...</p>
     </div>
 
     <template v-else>
-      <!-- Cabecera del perfil -->
       <div class="card-gaming mb-8">
         <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <UserAvatar
@@ -177,7 +248,6 @@ export default {
         </div>
       </div>
 
-      <!-- Formulario de edición -->
       <div v-if="editMode" class="card-gaming mb-8">
         <h2 class="font-heading text-xl font-bold text-white mb-4">✏️ Editar Perfil</h2>
 
@@ -204,20 +274,36 @@ export default {
               <option v-for="p in platforms" :key="p" :value="p">{{ p }}</option>
             </select>
           </div>
-          <!-- <div>
-            <label class="label-gaming" for="edit-avatar">URL del avatar</label>
-            <input type="url" id="edit-avatar" class="input-gaming" v-model="editForm.avatar_url" placeholder="https://img.icons8.com/fluent/1200/user-male-circle.jpg" />
-          </div> -->
+
+          <div>
+            <label class="label-gaming" for="edit-avatar-file">Avatar (opcional)</label>
+            <input
+              :key="avatarInputKey"
+              type="file"
+              id="edit-avatar-file"
+              class="input-gaming"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              @change="handleAvatarChange"
+            />
+            <p class="text-xs text-gray-500 mt-2">
+              Formatos permitidos: JPG, PNG, WEBP o GIF. Tamaño máximo: {{ maxImageSizeMB * 1024 }} KB.
+            </p>
+          </div>
+
+          <div v-if="avatarPreviewForForm" class="rounded-lg border border-gaming-border p-3 bg-gaming-darker">
+            <p class="text-sm text-gray-400 mb-2">Previsualización del avatar</p>
+            <img :src="avatarPreviewForForm" alt="Previsualización de avatar" class="w-28 h-28 object-cover rounded-full border border-gaming-border" />
+          </div>
+
           <div class="flex gap-3">
             <button type="submit" class="btn-primary" :disabled="savingProfile">
-              {{ savingProfile ? 'Guardando...' : 'Guardar cambios' }}
+              {{ savingProfile ? 'Guardando cambios y subiendo avatar...' : 'Guardar cambios' }}
             </button>
             <button type="button" @click="cancelEdit" class="btn-secondary cursor-pointer">Cancelar</button>
           </div>
         </form>
       </div>
 
-      <!-- Cambiar contraseña -->
       <div class="card-gaming mb-8">
         <h2 class="font-heading text-xl font-bold text-white mb-4">🔒 Cambiar Contraseña</h2>
 
@@ -243,7 +329,6 @@ export default {
         </form>
       </div>
 
-      <!-- Mis reseñas -->
       <h2 class="font-heading text-xl font-bold text-white mb-4">
         📝 Mis Reseñas ({{ posts?.length ?? 0 }})
       </h2>

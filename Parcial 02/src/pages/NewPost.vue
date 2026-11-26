@@ -1,6 +1,11 @@
 <script>
 import { subscribeToAuthStateChange } from '../services/auth.js';
 import { createPost } from '../services/posts.js';
+import { getPublicURL, uploadFile } from '../services/storage.js';
+
+const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_SIZE_MB = 0.5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
 export default {
   name: 'NewPost',
@@ -11,7 +16,10 @@ export default {
         platform: 'PC',
         rating: 5,
         content: '',
-        // image_url: '',
+      },
+      photo: {
+        file: null,
+        preview: null,
       },
       user: {
         id: null,
@@ -21,9 +29,10 @@ export default {
       errorMsg: '',
       successMsg: '',
       platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo', 'Móvil'],
+      maxImageSizeMB: MAX_IMAGE_SIZE_MB,
     };
   },
-  
+
   mounted() {
     subscribeToAuthStateChange((userData) => {
       this.user = userData;
@@ -31,35 +40,92 @@ export default {
   },
 
   methods: {
+    handlePhotoChange(ev) {
+      const selectedFile = ev.target.files?.[0] ?? null;
+
+      if (this.photo.preview) {
+        URL.revokeObjectURL(this.photo.preview);
+      }
+
+      this.errorMsg = '';
+
+      if (!selectedFile) {
+        this.photo = { file: null, preview: null };
+        return;
+      }
+
+      if (!VALID_IMAGE_TYPES.includes(selectedFile.type)) {
+        this.photo = { file: null, preview: null };
+        this.errorMsg = 'Formato inválido. Usá JPG, PNG, WEBP o GIF.';
+        ev.target.value = '';
+        return;
+      }
+
+      if (selectedFile.size > MAX_IMAGE_SIZE_BYTES) {
+        this.photo = { file: null, preview: null };
+        this.errorMsg = `La imagen supera el tamaño permitido (${MAX_IMAGE_SIZE_MB*1024} KB).`;
+        ev.target.value = '';
+        return;
+      }
+
+      this.photo.file = selectedFile;
+      this.photo.preview = URL.createObjectURL(selectedFile);
+    },
+
+    async uploadPostImageIfAny() {
+      if (!this.photo.file) return null;
+
+      const sanitizedName = this.photo.file.name.replace(/\s+/g, '-').toLowerCase();
+      const filename = `${this.user.id}/${Date.now()}-${sanitizedName}`;
+
+      await uploadFile(filename, this.photo.file, 'post-images');
+      return getPublicURL(filename, 'post-images');
+    },
+
+    resetForm() {
+      if (this.photo.preview) {
+        URL.revokeObjectURL(this.photo.preview);
+      }
+
+      this.form = { game_title: '', platform: 'PC', rating: 5, content: '' };
+      this.photo = { file: null, preview: null };
+    },
+
     async handleSubmit() {
       this.errorMsg = '';
       this.successMsg = '';
       this.loading = true;
 
       try {
+        const imageUrl = await this.uploadPostImageIfAny();
+
         await createPost({
           user_id: this.user.id,
           game_title: this.form.game_title,
           platform: this.form.platform,
           rating: Number(this.form.rating),
           content: this.form.content,
-          // image_url: this.form.image_url || null,
+          image_url: imageUrl,
         });
 
         this.successMsg = '¡Reseña publicada con éxito!';
+        this.resetForm();
 
-        // Limpiar formulario.
-        this.form = { game_title: '', platform: 'PC', rating: 5, content: '', image_url: '' };
-
-        // Redirigir al feed después de 1.5s.
         setTimeout(() => {
           this.$router.push('/feed');
         }, 1500);
       } catch (error) {
         this.errorMsg = error?.message ?? 'Error al publicar la reseña.';
       }
+
       this.loading = false;
     },
+  },
+
+  unmounted() {
+    if (this.photo.preview) {
+      URL.revokeObjectURL(this.photo.preview);
+    }
   },
 }
 </script>
@@ -140,16 +206,22 @@ export default {
         ></textarea>
       </div>
 
-      <!-- <div>
-        <label class="label-gaming" for="image-url">URL de imagen (opcional)</label>
+      <div>
+        <label class="label-gaming" for="post-image">Foto de la publicación (opcional)</label>
         <input
-          type="url"
-          id="image-url"
+          id="post-image"
+          type="file"
           class="input-gaming"
-          placeholder="https://ejemplo.com/imagen.jpg"
-          v-model="form.image_url"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          @change="handlePhotoChange"
         />
-      </div> -->
+        <p class="text-xs text-gray-500 mt-2">Formatos permitidos: JPG, PNG, WEBP o GIF. Tamaño máximo: {{ maxImageSizeMB * 1024 }} KB.</p>
+      </div>
+
+      <div v-if="photo.preview" class="rounded-lg border border-gaming-border p-3 bg-gaming-darker">
+        <p class="text-sm text-gray-400 mb-2">Previsualización</p>
+        <img :src="photo.preview" alt="Previsualización de imagen" class="w-full max-h-72 object-cover rounded-lg" />
+      </div>
 
       <div class="flex gap-4">
         <button

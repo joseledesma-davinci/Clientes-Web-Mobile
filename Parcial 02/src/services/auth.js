@@ -11,6 +11,20 @@ let userData = {
 
 let observers = [];
 
+let authReadyResolved = false;
+let resolveAuthReadyPromise = () => {};
+
+export const authReady = new Promise((resolve) => {
+    resolveAuthReadyPromise = resolve;
+});
+
+function resolveAuthReadyOnce() {
+    if(authReadyResolved) return;
+
+    authReadyResolved = true;
+    resolveAuthReadyPromise();
+}
+
 supabase.auth.onAuthStateChange((event, session) => {
     if(session !== null) {
         userData = {
@@ -40,6 +54,13 @@ supabase.auth.onAuthStateChange((event, session) => {
             favorite_platform: null,
         }
     }
+
+    /*
+        Resolvemos una sola vez cuando ya tenemos definido si hay sesión o no.
+        Esto permite que el router espere el estado inicial antes de evaluar el guard.
+    */
+    resolveAuthReadyOnce();
+
     notifyAll();
 });
 
